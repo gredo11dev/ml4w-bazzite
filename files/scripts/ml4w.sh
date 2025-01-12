@@ -1,150 +1,110 @@
 #!/bin/bash
-clear
 
-repo="mylinuxforwork/dotfiles"
+# Define the repository and version
+REPO_URL="https://github.com/mylinuxforwork/dotfiles.git"
+DEST_DIR="$HOME/Downloads/dotfiles"
+LATEST_VERSION="main"  # Replace with the actual version/branch you want
 
-# Get latest tag from GitHub
-get_latest_release() {
-  curl --silent "https://api.github.com/repos/$repo/releases/latest" | # Get latest release from GitHub api
-    grep '"tag_name":' |                                            # Get tag line
-    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
-}
+# Step 1: Clone the repository
+echo "Cloning the repository..."
+git clone --branch "$LATEST_VERSION" "$REPO_URL" "$DEST_DIR"
 
-# Get latest zip from GitHub
-get_latest_zip() {
-  curl --silent "https://api.github.com/repos/$repo/releases/latest" | # Get latest release from GitHub api
-    grep '"zipball_url":' |                                            # Get tag line
-    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
-}
-
-# Check if package is installed
-_isInstalled() {
-    package="$1";
-    check=$(rpm -q "$package" 2>/dev/null)
-    if [ -z "$check" ]; then
-        echo 1; # '1' means 'false' in Bash
-        return; # false
-    else
-        echo 0; # '0' means 'true' in Bash
-        return; # true
-    fi
-}
-
-# Install required packages non-interactively
-_installPackages() {
-    toInstall=();
-    for pkg; do
-        if [[ $(_isInstalled "${pkg}") == 0 ]]; then
-            echo "${pkg} is already installed.";
-            continue;
-        fi;
-        toInstall+=("${pkg}");
-    done;
-    if [[ "${toInstall[@]}" == "" ]] ; then
-        return;
-    fi;
-    printf "Package(s) not installed:\n%s\n" "${toInstall[@]}";
-    sudo rpm-ostree install --assumeyes "${toInstall[@]}"
-}
-
-# Required packages for the installer
-packages=(
-    "wget"
-    "unzip"
-    "rsync"
-    "git"
-    "figlet"
-)
-
-latest_version=$(get_latest_release)
-
-# Some colors
-GREEN='\033[0;32m'
-NONE='\033[0m'
-
-# Header
-echo -e "${GREEN}"
-cat <<"EOF"
-   ____         __       ____       
-  /  _/__  ___ / /____ _/ / /__ ____
- _/ // _ \(_-</ __/ _ `/ / / -_) __/
-/___/_//_/___/\__/\_,_/_/_/\__/_/   
-                                    
-EOF
-echo "ML4W Dotfiles for Hyprland"
-echo -e "${NONE}"
-
-# Automatically proceed with the installation without user interaction
-echo ":: Installation started"
-echo
-
-# Create Downloads folder if not exists
-if [ ! -d ~/Downloads ]; then
-    mkdir ~/Downloads
-    echo ":: Downloads folder created"
-fi 
-
-# Remove existing download folder and zip files 
-rm -f $HOME/Downloads/dotfiles-main.zip
-rm -f $HOME/Downloads/dotfiles-dev.zip
-rm -f $HOME/Downloads/dotfiles.zip
-rm -rf $HOME/Downloads/dotfiles
-rm -rf $HOME/Downloads/dotfiles_temp
-rm -rf $HOME/Downloads/dotfiles-main
-rm -rf $HOME/Downloads/dotfiles-dev
-
-# Install required packages
-echo ":: Checking that required packages are installed..."
-_installPackages "${packages[@]}";
-
-bash <(curl -s https://raw.githubusercontent.com/mylinuxforwork/dotfiles/main/share/packages/fedora/special/gum.sh)
-
-echo
-# Select the dotfiles version (automatically choose "main-release")
-version="main-release"
-echo ":: Automatically selecting main-release"
-
-# Download the chosen version
-if [ "$version" == "main-release" ]; then
-    echo ":: Installing Main Release"
-    echo
-    git clone --branch $latest_version --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
-elif [ "$version" == "rolling-release" ]; then
-    echo ":: Installing Rolling Release"
-    echo
-    git clone --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
-else
-    echo ":: Setup canceled"
-    exit 130
+# Check if the clone was successful
+if [ ! -d "$DEST_DIR" ]; then
+    echo "Failed to clone the repository. Exiting."
+    exit 1
 fi
-echo ":: Download complete."
-echo
-# Cd into dotfiles folder
-cd $HOME/Downloads/dotfiles/bin/
 
-# Start Spinner (automatically wait)
-gum spin --spinner dot --title "Starting the installation now..." -- sleep 3
+# Step 2: Change to the required directory
+BIN_DIR="$DEST_DIR/bin/"
+if [ -d "$BIN_DIR" ]; then
+    cd "$BIN_DIR"
+else
+    echo "Directory $BIN_DIR does not exist! Exiting."
+    exit 1
+fi
 
-# Use expect to handle prompts
+# Step 3: Check if the setup script exists and is executable
+if [ -f "./ml4w-hyprland-setup" ]; then
+    chmod +x ./ml4w-hyprland-setup
+else
+    echo "ml4w-hyprland-setup script is missing! Exiting."
+    exit 1
+fi
+
+# Step 4: Run the setup script in a non-TTY environment (use gum spin if TTY, fallback to echo)
+if [ -t 1 ]; then
+    gum spin --spinner dot --title "Starting the installation now..." -- sleep 3
+else
+    echo "Starting the installation now..."
+fi
+
+# Step 5: Run the setup script for installation and interact automatically
+echo "Running the setup script..."
+
+# Use expect for automatic responses
 expect << EOF
 spawn ./ml4w-hyprland-setup -m install
 expect {
-    "Do you want to continue? (Y/N)" { send "Y\r"; exp_continue }
-    "Are you sure?" { send "Y\r"; exp_continue }
+    -re "(Do you want to start the update now?|Are you sure you want to continue?|Proceed with the update?|Is this ok?|Continue with the installation?)" {
+        send "y\r"
+        exp_continue
+    }
     eof
 }
 EOF
-echo
 
-# Start Spinner (automatically wait)
-gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
+if [ $? -ne 0 ]; then
+    echo "Installation failed during setup! Exiting."
+    exit 1
+fi
 
-# Use expect to handle prompts during setup
+# Step 6: Run the setup script for Fedora
+echo "Running the setup script for Fedora..."
+
+# Use expect for automatic responses
 expect << EOF
 spawn ./ml4w-hyprland-setup -p fedora
 expect {
-    "Do you want to continue? (Y/N)" { send "Y\r"; exp_continue }
-    "Are you sure?" { send "Y\r"; exp_continue }
+    -re "(Do you want to start the update now?|Are you sure you want to continue?|Proceed with the update?|Is this ok?|Continue with the installation?)" {
+        send "y\r"
+        exp_continue
+    }
     eof
 }
 EOF
+
+if [ $? -ne 0 ]; then
+    echo "Fedora setup failed! Exiting."
+    exit 1
+fi
+
+# Step 7: Verify installation files in /usr/
+echo "Checking for installation files in /usr/..."
+
+# Define the directories to search for installation files
+INSTALL_DIRS=("/usr/bin" "/usr/local/bin" "/usr/share" "/usr/lib")
+
+# Search for specific files installed (you can adjust the filenames or patterns based on your setup)
+SEARCH_FILES=("ml4w-hyprland-setup" "dotfiles" "ml4w")
+
+# Loop through directories and search for files
+for DIR in "${INSTALL_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+        for FILE in "${SEARCH_FILES[@]}"; do
+            FOUND=$(find "$DIR" -type f -name "$FILE" 2>/dev/null)
+            if [ -n "$FOUND" ]; then
+                echo "Found: $FOUND"
+            else
+                echo "Not found: $FILE in $DIR"
+            fi
+        done
+    else
+        echo "Directory $DIR does not exist."
+    fi
+done
+
+# Step 8: Final confirmation
+echo "Setup completed successfully!"
+
+# Optional: Additional steps can be added based on specific requirements for post-setup actions.
