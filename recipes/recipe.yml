@@ -19,7 +19,8 @@ modules:
     repos:
       - https://copr.fedorainfracloud.org/coprs/atim/starship/repo/fedora-%OS_VERSION%/atim-starship-fedora-%OS_VERSION%.repo
     remove:
-    - libva
+    - libva-2.22.0-3.fc41.x86_64
+    - libva-1:2.22.0-1.fc41.x86_64
 # module configuration, executed in order
 # you can include multiple instances of the same module
 modules:
