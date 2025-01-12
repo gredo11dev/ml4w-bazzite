@@ -33,6 +33,7 @@ modules:
       - xdg-user-dirs
       - man-pages
       - python3-pip
+      - expect
       
   - type: script
     scripts:
