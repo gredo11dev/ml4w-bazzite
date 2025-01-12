@@ -29,7 +29,6 @@ modules:
       - gum
       
   - type: script
-    source: local
     scripts:
       - /scripts/ml4w.sh  # Correct path to the script inside the build container
 
