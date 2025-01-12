@@ -31,7 +31,7 @@ modules:
   - type: script
     source: local
     scripts:
-      - /tmp/modules/ml4w.sh  # Correct path to the script inside the build container
+      - ml4w.sh  # Correct path to the script inside the build container
 
   - type: default-flatpaks
     notify: true # Send notification after install/uninstall is finished (true/false)
