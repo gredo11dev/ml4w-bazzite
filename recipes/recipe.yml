@@ -14,8 +14,8 @@ modules:
     files:
       - source: system
         destination: /  # Copies files/system/* into the image's root folder /
-      - source: files/scripts/ml4w.sh  # Path relative to your project root
-        destination: /tmp/modules/ml4w.sh  # Path where it should be placed in the container
+      - source: scripts  # Path relative to your project root
+        destination: / # Path where it should be placed in the container
 
   - type: rpm-ostree
     repos:
