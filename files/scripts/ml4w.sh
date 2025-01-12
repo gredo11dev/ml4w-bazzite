@@ -1,5 +1,6 @@
 #!/bin/bash
 clear
+
 # Start with a root shell using sudo -i to ensure no password prompt is needed
 sudo -i
 
@@ -15,7 +16,7 @@ get_latest_release() {
 # Check if package is installed
 _isInstalled() {
     package="$1"
-    check=$(yum list installed | grep $package)
+    check=$(rpm -q $package)
     if [ -z "$check" ]; then
         echo 1
         return 1  # false
@@ -25,7 +26,7 @@ _isInstalled() {
     fi
 }
 
-# Install required packages
+# Install required packages using rpm-ostree
 _installPackages() {
     toInstall=()
     for pkg; do
@@ -39,7 +40,7 @@ _installPackages() {
         return
     fi
     printf "Package not installed:\n%s\n" "${toInstall[@]}"
-    sudo -n rpm-ostree install--assumeyes "${toInstall[@]}"
+    sudo rpm-ostree install --assumeyes "${toInstall[@]}"
 }
 
 # Install Gum if not installed
@@ -49,15 +50,15 @@ name=Charm
 baseurl=https://repo.charm.sh/yum/
 enabled=1
 gpgcheck=1
-gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo -n tee /etc/yum.repos.d/charm.repo
-    sudo -n dnf install --assumeyes gum
+gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo tee /etc/yum.repos.d/charm.repo
+    sudo rpm-ostree install --assumeyes gum
 }
 
 # Install Expect if not installed
 install_expect() {
     if ! command -v expect &>/dev/null; then
         echo ":: Installing expect..."
-        sudo -n dnf install --assumeyes expect
+        sudo rpm-ostree install --assumeyes expect
     fi
 }
 
