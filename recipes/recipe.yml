@@ -26,18 +26,9 @@ modules:
       - rsync
       - git
       - figlet
-      - gum
-      - zip
-      - sed
-      - vim
-      - xdg-user-dirs
-      - man-pages
-      - python3-pip
       - expect
       - steam
-     
-
-      
+           
   - type: script
     scripts:
       - ml4w.sh  # Correct path to the script inside the build container
