@@ -1,5 +1,10 @@
 #!/bin/bash
 clear
+# Ensure the script runs with root privileges without asking for a password
+if [ "$(id -u)" -ne 0 ]; then
+    echo "This script needs to be run as root or with sudo."
+    exit 1
+fi
 
 repo="mylinuxforwork/dotfiles"
 
@@ -48,7 +53,7 @@ baseurl=https://repo.charm.sh/yum/
 enabled=1
 gpgcheck=1
 gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo -n tee /etc/yum.repos.d/charm.repo
-    sudo -n yum install --assumeyes gum
+    sudo -n dnf install --assumeyes gum
 }
 
 # Install Expect if not installed
