@@ -10,58 +10,6 @@ get_latest_release() {
     sed -E 's/.*"([^"]+)".*/\1/'
 }
 
-# Check if a package is installed
-_isInstalled() {
-    package="$1"
-    rpm -q "$package" &>/dev/null
-    if [ $? -ne 0 ]; then
-        echo 1
-        return 1  # false
-    else
-        echo 0
-        return 0  # true
-    fi
-}
-
-# Install required packages using rpm-ostree
-_installPackages() {
-    toInstall=()
-    for pkg; do
-        if [[ $(_isInstalled "${pkg}") == 0 ]]; then
-            echo "${pkg} is already installed."
-            continue
-        fi
-        toInstall+=("${pkg}")
-    done
-    if [[ "${toInstall[@]}" == "" ]]; then
-        return
-    fi
-    printf "Packages not installed:\n%s\n" "${toInstall[@]}"
-    sudo -n rpm-ostree install "${toInstall[@]}"
-}
-
-# Install Gum if not installed
-install_gum() {
-    sudo -n rpm-ostree install gum
-}
-
-# Install Expect if not installed
-install_expect() {
-    if ! command -v expect &>/dev/null; then
-        echo ":: Installing expect..."
-        sudo -n rpm-ostree install expect
-    fi
-}
-
-# Required packages for the installer
-packages=(
-    "wget"
-    "unzip"
-    "rsync"
-    "git"
-    "figlet"
-)
-
 latest_version=$(get_latest_release)
 
 # Some colors
@@ -80,12 +28,6 @@ EOF
 echo "ML4W Dotfiles for Hyprland"
 echo -e "${NONE}"
 
-# Install required packages and gum
-echo ":: Checking and installing required packages..."
-_installPackages "${packages[@]}"
-install_gum
-install_expect
-
 # Automatically clone the "main-release" without interaction
 echo ":: Automatically installing Main Release"
 
@@ -102,20 +44,9 @@ cd $HOME/Downloads/dotfiles/bin/
 echo ":: Automatically answering 'Yes' to all prompts"
 yes | ./ml4w-hyprland-setup -m install
 
-# Start Spinner
-gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
-
-# Handle Update Prompt using expect
-echo ":: Waiting for the update prompt and automatically answering 'y'"
-
-expect <<EOF
-spawn ./ml4w-hyprland-setup -p fedora
-expect {
-    "DO YOU WANT TO START THE UPDATE NOW?" { send "y\r"; exp_continue }
-    timeout { send "y\r"; exp_continue }
-}
-expect eof
-EOF
+# Handle Update Prompt using yes
+echo ":: Automatically answering 'Yes' to the update prompt"
+yes | ./ml4w-hyprland-setup -p fedora
 
 # Start setup for Fedora
 if [ -f "./ml4w-hyprland-setup" ]; then
