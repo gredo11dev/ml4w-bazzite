@@ -27,6 +27,12 @@ modules:
       - git
       - figlet
       - gum
+      - zip
+      - sed
+      - vim
+      - xdg-user-dirs
+      - man-pages
+      - python3-pip
       
   - type: script
     scripts:
