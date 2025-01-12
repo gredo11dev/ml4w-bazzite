@@ -1,10 +1,7 @@
 #!/bin/bash
 clear
-# Ensure the script runs with root privileges without asking for a password
-if [ "$(id -u)" -ne 0 ]; then
-    echo "This script needs to be run as root or with sudo."
-    exit 1
-fi
+# Start with a root shell using sudo -i to ensure no password prompt is needed
+sudo -i
 
 repo="mylinuxforwork/dotfiles"
 
