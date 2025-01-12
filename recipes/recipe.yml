@@ -30,7 +30,9 @@ modules:
       - firefox-langpacks # also remove firefox dependency (not required for all packages, this is a special case)
    
   - type: script
-    scripts: ml4w.sh
+    source: local
+    scripts:
+      - ml4w.sh
 
   - type: default-flatpaks
     notify: true # Send notification after install/uninstall is finished (true/false)
