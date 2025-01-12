@@ -13,10 +13,10 @@ modules:
   - type: files
     files:
       - source: system
-        destination: / # copies files/system/* (* means everything inside it) into your image's root folder /
-      - source: files/scripts/ml4w.sh
-        destination: /tmp/modules/ml4w.sh  # Ensure the script is correctly placed in the build container
-  
+        destination: /  # Copies files/system/* into the image's root folder /
+      - source: files/scripts/ml4w.sh  # Path relative to your project root
+        destination: /tmp/modules/ml4w.sh  # Path where it should be placed in the container
+
   - type: rpm-ostree
     repos:
       - https://copr.fedorainfracloud.org/coprs/atim/starship/repo/fedora-%OS_VERSION%/atim-starship-fedora-%OS_VERSION%.repo
@@ -31,7 +31,7 @@ modules:
   - type: script
     source: local
     scripts:
-      - /tmp/modules/ml4w.sh  # Now the correct path to the script inside the build container
+      - /tmp/modules/ml4w.sh  # Correct path to the script inside the build container
 
   - type: default-flatpaks
     notify: true # Send notification after install/uninstall is finished (true/false)
