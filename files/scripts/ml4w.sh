@@ -50,7 +50,7 @@ baseurl=https://repo.charm.sh/yum/
 enabled=1
 gpgcheck=1
 gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo -n tee /etc/yum.repos.d/charm.repo
-    sudo -n rpm-ostree install --assumeyes gum
+    sudo -n dnf install --assumeyes gum
 }
 
 # Install Expect if not installed
