@@ -39,7 +39,7 @@ _installPackages() {
         return
     fi
     printf "Package not installed:\n%s\n" "${toInstall[@]}"
-    sudo -n dnf install --assumeyes "${toInstall[@]}"
+    sudo -n rpm-ostree install--assumeyes "${toInstall[@]}"
 }
 
 # Install Gum if not installed
@@ -50,7 +50,7 @@ baseurl=https://repo.charm.sh/yum/
 enabled=1
 gpgcheck=1
 gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo -n tee /etc/yum.repos.d/charm.repo
-    sudo -n dnf install --assumeyes gum
+    sudo -n rpm-ostree install --assumeyes gum
 }
 
 # Install Expect if not installed
