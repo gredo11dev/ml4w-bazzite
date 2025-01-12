@@ -37,7 +37,7 @@ _installPackages() {
         return
     fi
     printf "Package not installed:\n%s\n" "${toInstall[@]}"
-    sudo dnf install --assumeyes "${toInstall[@]}"
+    sudo -n dnf install --assumeyes "${toInstall[@]}"
 }
 
 # Install Gum if not installed
@@ -47,15 +47,15 @@ name=Charm
 baseurl=https://repo.charm.sh/yum/
 enabled=1
 gpgcheck=1
-gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo tee /etc/yum.repos.d/charm.repo
-    sudo yum install --assumeyes gum
+gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo -n tee /etc/yum.repos.d/charm.repo
+    sudo -n yum install --assumeyes gum
 }
 
 # Install Expect if not installed
 install_expect() {
     if ! command -v expect &>/dev/null; then
         echo ":: Installing expect..."
-        sudo dnf install --assumeyes expect
+        sudo -n dnf install --assumeyes expect
     fi
 }
 
