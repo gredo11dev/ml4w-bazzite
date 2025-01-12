@@ -60,7 +60,15 @@ rm -f ~/Downloads/dotfiles*.zip
 echo ":: Checking that required packages are installed..."
 _installPackages "${packages[@]}";
 
-bash <(curl -s https://raw.githubusercontent.com/mylinuxforwork/dotfiles/main/share/packages/fedora/special/gum.sh)
+# Install gum (using correct URL for Fedora version)
+echo ":: Installing gum..."
+echo '[charm]
+name=Charm
+baseurl=https://repo.charm.sh/rpm/fedora/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.charm.sh/rpm/gpg.key' | sudo tee /etc/yum.repos.d/charm.repo
+sudo dnf install --assumeyes gum
 
 # Clone the main release of the dotfiles repo
 echo ":: Cloning the main release of the dotfiles repository"
