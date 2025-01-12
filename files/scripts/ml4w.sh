@@ -3,55 +3,80 @@ clear
 
 repo="mylinuxforwork/dotfiles"
 
-# Debugging: Display current working directory and list files
-echo "Current directory: $(pwd)"
-echo "Files in current directory: $(ls -l)"
-
-# Get latest release
+# Get latest tag from GitHub
 get_latest_release() {
-  curl --silent "https://api.github.com/repos/$repo/releases/latest" |
-    grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+  curl --silent "https://api.github.com/repos/$repo/releases/latest" | # Get latest release from GitHub api
+    grep '"tag_name":' |                                            # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
+}
+
+# Install required packages
+_installPackages() {
+    toInstall=();
+    for pkg; do
+        if ! rpm -q $pkg &>/dev/null; then
+            toInstall+=("${pkg}");
+        fi;
+    done;
+    if [[ "${toInstall[@]}" == "" ]] ; then
+        return;
+    fi;
+    sudo dnf install --assumeyes "${toInstall[@]}"
 }
 
 # Required packages for the installer
-packages=("wget" "unzip" "rsync" "git" "figlet" "gum")
+packages=("wget" "unzip" "rsync" "git" "figlet")
 
-# Check and install required packages
-echo "Installing required packages..."
-sudo dnf install --assumeyes "${packages[@]}"
+latest_version=$(get_latest_release)
 
-# Predefine responses
-yn="Y"  # Auto-confirm installation
-version="main-release"  # Default version
+# Some colors
+GREEN='\033[0;32m'
+NONE='\033[0m'
 
-# Create Downloads folder
+# Header
+echo -e "${GREEN}"
+cat <<"EOF"
+   ____         __       ____       
+  /  _/__  ___ / /____ _/ / /__ ____
+ _/ // _ \(_-</ __/ _ `/ / / -_) __/
+/___/_//_/___/\__/\_,_/_/_/\__/_/   
+                                    
+EOF
+echo "ML4W Dotfiles for Hyprland"
+echo -e "${NONE}"
+
+# Automatically start installation without asking
+echo ":: Installation started"
+echo
+
+# Create Downloads folder if not exists
 mkdir -p ~/Downloads
 
 # Clean up old files
-echo "Cleaning up old files..."
 rm -rf ~/Downloads/dotfiles ~/Downloads/dotfiles_temp ~/Downloads/dotfiles-main ~/Downloads/dotfiles-dev
 rm -f ~/Downloads/dotfiles*.zip
 
-# Clone appropriate dotfiles version
-echo "Cloning dotfiles repository..."
-if [ "$version" == "main-release" ]; then
-  git clone --branch $(get_latest_release) --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
-else
-  git clone --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
-fi
+# Install required packages
+echo ":: Checking that required packages are installed..."
+_installPackages "${packages[@]}";
 
-# Navigate to the bin directory
-cd ~/Downloads/dotfiles/bin/
+bash <(curl -s https://raw.githubusercontent.com/mylinuxforwork/dotfiles/main/share/packages/fedora/special/gum.sh)
 
-# Ensure that the script is executable (in case it's not)
-echo "Ensuring script is executable..."
-chmod +x ml4w-hyprland-setup
+# Clone the main release of the dotfiles repo
+echo ":: Cloning the main release of the dotfiles repository"
+git clone --branch $latest_version --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
 
-# Run the installation and setup
-echo "Running Hyprland setup..."
+echo ":: Download complete."
+echo
+
+# Cd into dotfiles folder
+cd $HOME/Downloads/dotfiles/bin/
+
+# Start installation
+gum spin --spinner dot --title "Starting the installation now..." -- sleep 3
 ./ml4w-hyprland-setup -m install
-./ml4w-hyprland-setup -p fedora
+echo
 
-# Final debugging step: List the files in the current directory after execution
-echo "Listing files in ~/Downloads/dotfiles/bin/:"
-ls -l ~/Downloads/dotfiles/bin/
+# Start setup
+gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
+./ml4w-hyprland-setup -p fedora
