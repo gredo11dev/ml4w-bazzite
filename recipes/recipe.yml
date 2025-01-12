@@ -15,7 +15,7 @@ modules:
       - source: system
         destination: /  # Copies files/system/* into the image's root folder /
       - source: scripts  # Path relative to your project root
-        destination: / # Path where it should be placed in the container
+        destination: /scripts # Path where it should be placed in the container
 
   - type: rpm-ostree
     repos:
