@@ -75,6 +75,7 @@ modules:
       - flatpak
       - NetworkManager-tui
       - nwg-dock-hyprland
+      - tty
           
   - type: script
     scripts:
