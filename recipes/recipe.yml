@@ -5,7 +5,7 @@ name: ml4w-bazzite
 description: This is my personal OS image.
 
 # the base image to build on top of (FROM) and the version tag to use
-base-image: ghcr.io/ublue-os/bazzite-nvidia
+base-image: ghcr.io/wayblueorg/hyprland-nvidia
 image-version: 41 # latest is also supported if you want new updates ASAP
 
 # module configuration, executed in order
@@ -27,54 +27,8 @@ modules:
       - git
       - figlet
       - expect
-      - hyprland
-      - hyprpaper
-      - hyprlock
-      - hypridle
-      - xdg-desktop-portal-hyprland
-      - libnotify
-      - dunst
-      - kitty
-      - qt5-qtwayland
-      - qt6-qtwayland
-      - fastfetch
-      - xdg-desktop-portal-gtk
-      - eza
-      - python-pip
-      - python3-gobject
-      - tumbler
-      - brightnessctl
-      - nm-connection-editor
-      - network-manager-applet
-      - gtk4
-      - libadwaita
-      - fuse
-      - ImageMagick
-      - jq
-      - xclip
-      - firefox
-      - neovim
-      - htop
-      - nautilus
-      - pinta
-      - blueman
-      - grim
-      - slurp
-      - qt6ct
-      - waybar
-      - rofi-wayland
-      - zsh
-      - fzf
-      - pavucontrol
-      - papirus-icon-theme
-      - gvfs
-      - wlogout
-      - fontawesome-6-free-fonts
-      - mozilla-fira-sans-fonts
-      - fira-code-fonts
-      - flatpak
-      - NetworkManager-tui
-      - nwg-dock-hyprland
+      - steam
+
           
   - type: script
     scripts:
