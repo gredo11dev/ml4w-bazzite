@@ -27,7 +27,54 @@ modules:
       - git
       - figlet
       - expect
-
+      - hyprland
+      - hyprpaper
+      - hyprlock
+      - hypridle
+      - xdg-desktop-portal-hyprland
+      - libnotify
+      - dunst
+      - kitty
+      - qt5-qtwayland
+      - qt6-qtwayland
+      - fastfetch
+      - xdg-desktop-portal-gtk
+      - eza
+      - python-pip
+      - python3-gobject
+      - tumbler
+      - brightnessctl
+      - nm-connection-editor
+      - network-manager-applet
+      - gtk4
+      - libadwaita
+      - fuse
+      - ImageMagick
+      - jq
+      - xclip
+      - firefox
+      - neovim
+      - htop
+      - nautilus
+      - pinta
+      - blueman
+      - grim
+      - slurp
+      - qt6ct
+      - waybar
+      - rofi-wayland
+      - zsh
+      - fzf
+      - pavucontrol
+      - papirus-icon-theme
+      - gvfs
+      - wlogout
+      - fontawesome-6-free-fonts
+      - mozilla-fira-sans-fonts
+      - fira-code-fonts
+      - flatpak
+      - NetworkManager-tui
+      - nwg-dock-hyprland
           
   - type: script
     scripts:
