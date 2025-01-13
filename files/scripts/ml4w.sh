@@ -5,39 +5,58 @@ repo="mylinuxforwork/dotfiles"
 
 # Get latest tag from GitHub
 get_latest_release() {
-  curl --silent "https://api.github.com/repos/$repo/releases/latest" | # Get latest release from GitHub api
-    grep '"tag_name":' |                                            # Get tag line
-    sed -E 's/.*"([^"]+)".*/\1/'                                    # Pluck JSON value
+  curl --silent "https://api.github.com/repos/$repo/releases/latest" | 
+    grep '"tag_name":' | 
+    sed -E 's/.*"([^"]+)".*/\1/'
 }
 
 # Check if package is installed
 _isInstalled() {
-    package="$1";
-    check=$(rpm -qa | grep $package)
+    package="$1"
+    check=$(yum list installed | grep $package)
     if [ -z "$check" ]; then
-        echo 1; #'1' means 'false' in Bash
-        return; #false
+        echo 1
+        return 1  # false
     else
-        echo 0; #'0' means 'true' in Bash
-        return; #true
+        echo 0
+        return 0  # true
     fi
 }
 
 # Install required packages
 _installPackages() {
-    toInstall=();
+    toInstall=()
     for pkg; do
         if [[ $(_isInstalled "${pkg}") == 0 ]]; then
-            echo "${pkg} is already installed.";
-            continue;
-        fi;
-        toInstall+=("${pkg}");
-    done;
-    if [[ "${toInstall[@]}" == "" ]] ; then
-        return;
-    fi;
-    printf "Package not installed:\n%s\n" "${toInstall[@]}";
-    rpm-ostree install --assumeyes "${toInstall[@]}"
+            echo "${pkg} is already installed."
+            continue
+        fi
+        toInstall+=("${pkg}")
+    done
+    if [[ "${toInstall[@]}" == "" ]]; then
+        return
+    fi
+    printf "Package not installed:\n%s\n" "${toInstall[@]}"
+    sudo dnf install --assumeyes "${toInstall[@]}"
+}
+
+# Install Gum if not installed
+install_gum() {
+    echo '[charm]
+name=Charm
+baseurl=https://repo.charm.sh/yum/
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo tee /etc/yum.repos.d/charm.repo
+    sudo yum install --assumeyes gum
+}
+
+# Install Expect if not installed
+install_expect() {
+    if ! command -v expect &>/dev/null; then
+        echo ":: Installing expect..."
+        sudo dnf install --assumeyes expect
+    fi
 }
 
 # Required packages for the installer
@@ -67,45 +86,16 @@ EOF
 echo "ML4W Dotfiles for Hyprland"
 echo -e "${NONE}"
 
-echo ":: Starting automated installation..."
+# Install required packages and gum
+echo ":: Checking and installing required packages..."
+_installPackages "${packages[@]}"
+install_gum
+install_expect
 
-# Create Downloads folder if not exists
-if [ ! -d ~/Downloads ]; then
-    mkdir ~/Downloads
-    echo ":: Downloads folder created"
-fi 
+# Automatically clone the "main-release" without interaction
+echo ":: Automatically installing Main Release"
 
-# Remove existing download folder and zip files 
-if [ -f $HOME/Downloads/dotfiles-main.zip ]; then
-    rm $HOME/Downloads/dotfiles-main.zip
-fi
-if [ -f $HOME/Downloads/dotfiles-dev.zip ]; then
-    rm $HOME/Downloads/dotfiles-dev.zip
-fi
-if [ -f $HOME/Downloads/dotfiles.zip ]; then
-    rm $HOME/Downloads/dotfiles.zip
-fi
-if [ -d $HOME/Downloads/dotfiles ]; then
-    rm -rf $HOME/Downloads/dotfiles
-fi
-if [ -d $HOME/Downloads/dotfiles_temp ]; then
-    rm -rf $HOME/Downloads/dotfiles_temp
-fi
-if [ -d $HOME/Downloads/dotfiles-main ]; then
-    rm -rf $HOME/Downloads/dotfiles-main
-fi
-if [ -d $HOME/Downloads/dotfiles-dev ]; then
-    rm -rf $HOME/Downloads/dotfiles-dev
-fi
-
-# Install required packages
-echo ":: Installing required packages..."
-_installPackages "${packages[@]}";
-
-# Try to install gum but continue if it fails
-rpm-ostree install --assumeyes gum || true
-
-echo ":: Installing Main Release"
+# Clone the main release directly without any prompts
 git clone --branch $latest_version --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
 
 echo ":: Download complete."
@@ -114,15 +104,30 @@ echo
 # Cd into dotfiles folder
 cd $HOME/Downloads/dotfiles/bin/
 
-# Start Spinner (continue if it fails)
-gum spin --spinner dot --title "Starting the installation now..." -- sleep 3 || echo ":: Starting the installation..."
+# Use 'yes' to automatically answer all "Yes/No" prompts
+echo ":: Automatically answering 'Yes' to all prompts"
+yes | ./ml4w-hyprland-setup -m install
 
-# Start installation
-./ml4w-hyprland-setup -m install
-echo
+# Start Spinner
+gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
 
-# Start Spinner (continue if it fails)
-gum spin --spinner dot --title "Starting the setup now..." -- sleep 3 || echo ":: Starting the setup..."
+# Handle Update Prompt using expect
+echo ":: Waiting for the update prompt and automatically answering 'y'"
 
-# Start setup
-./ml4w-hyprland-setup -p fedora
+expect <<EOF
+spawn ./ml4w-hyprland-setup -p fedora
+expect {
+    "DO YOU WANT TO START THE UPDATE NOW?" { send "y\r"; exp_continue }
+    timeout { send "y\r"; exp_continue }
+}
+expect eof
+EOF
+
+# Start setup for Fedora
+if [ -f "./ml4w-hyprland-setup" ]; then
+    echo ":: Starting Fedora setup..."
+    yes | ./ml4w-hyprland-setup -p fedora
+else
+    echo ":: Error: ml4w-hyprland-setup not found or is not executable."
+    exit 1
+fi
