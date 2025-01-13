@@ -27,7 +27,6 @@ modules:
       - git
       - figlet
       - expect
-      - steam
 
           
   - type: script
