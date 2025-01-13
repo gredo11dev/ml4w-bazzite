@@ -73,6 +73,7 @@ latest_version=$(get_latest_release)
 # Some colors
 GREEN='\033[0;32m'
 NONE='\033[0m'
+RED='\033[0;31m'
 
 # Header
 echo -e "${GREEN}"
@@ -111,23 +112,65 @@ yes | ./ml4w-hyprland-setup -m install
 # Start Spinner
 gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
 
-# Handle Update Prompt using expect
-echo ":: Waiting for the update prompt and automatically answering 'y'"
+# Handle setup using expect
+echo ":: Starting Fedora setup with automatic responses"
 
 expect <<EOF
 spawn ./ml4w-hyprland-setup -p fedora
 expect {
     "DO YOU WANT TO START THE UPDATE NOW?" { send "y\r"; exp_continue }
+    "Would you like to reboot now?" { send "y\r"; exp_continue }
     timeout { send "y\r"; exp_continue }
 }
 expect eof
 EOF
 
-# Start setup for Fedora
-if [ -f "./ml4w-hyprland-setup" ]; then
-    echo ":: Starting Fedora setup..."
-    yes | ./ml4w-hyprland-setup -p fedora
+# Check if critical files and directories exist after installation
+echo ":: Verifying installation..."
+
+critical_paths=(
+    "$HOME/.config/hypr"
+    "$HOME/.config/waybar"
+    "$HOME/.config/kitty"
+    "$HOME/.config/rofi"
+    "$HOME/.local/share/fonts"
+)
+
+critical_files=(
+    "$HOME/.config/hypr/hyprland.conf"
+    "$HOME/.config/waybar/config"
+    "$HOME/.config/waybar/style.css"
+    "$HOME/.config/kitty/kitty.conf"
+    "$HOME/.config/rofi/config.rasi"
+)
+
+# Check directories
+missing_paths=()
+for path in "${critical_paths[@]}"; do
+    if [ ! -d "$path" ]; then
+        missing_paths+=("$path")
+    fi
+done
+
+# Check files
+missing_files=()
+for file in "${critical_files[@]}"; do
+    if [ ! -f "$file" ]; then
+        missing_files+=("$file")
+    fi
+done
+
+# Display results
+if [ ${#missing_paths[@]} -eq 0 ] && [ ${#missing_files[@]} -eq 0 ]; then
+    echo -e "${GREEN}✓ All required files and directories are in place${NONE}"
 else
-    echo ":: Error: ml4w-hyprland-setup not found or is not executable."
+    if [ ${#missing_paths[@]} -gt 0 ]; then
+        echo -e "${RED}Warning: The following directories are missing:${NONE}"
+        printf '%s\n' "${missing_paths[@]}"
+    fi
+    if [ ${#missing_files[@]} -gt 0 ]; then
+        echo -e "${RED}Warning: The following files are missing:${NONE}"
+        printf '%s\n' "${missing_files[@]}"
+    fi
     exit 1
 fi
