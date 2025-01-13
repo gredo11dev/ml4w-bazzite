@@ -102,7 +102,8 @@ fi
 echo ":: Installing required packages..."
 _installPackages "${packages[@]}";
 
-rpm-ostree install --assumeyes gum
+# Try to install gum but continue if it fails
+rpm-ostree install --assumeyes gum || true
 
 echo ":: Installing Main Release"
 git clone --branch $latest_version --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
@@ -113,15 +114,15 @@ echo
 # Cd into dotfiles folder
 cd $HOME/Downloads/dotfiles/bin/
 
-# Start Spinner
-gum spin --spinner dot --title "Starting the installation now..." -- sleep 3
+# Start Spinner (continue if it fails)
+gum spin --spinner dot --title "Starting the installation now..." -- sleep 3 || echo ":: Starting the installation..."
 
 # Start installation
 ./ml4w-hyprland-setup -m install
 echo
 
-# Start Spinner
-gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
+# Start Spinner (continue if it fails)
+gum spin --spinner dot --title "Starting the setup now..." -- sleep 3 || echo ":: Starting the setup..."
 
 # Start setup
 ./ml4w-hyprland-setup -p fedora
