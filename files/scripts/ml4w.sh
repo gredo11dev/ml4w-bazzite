@@ -1,224 +1,130 @@
 #!/bin/bash
-clear
 
-repo="mylinuxforwork/dotfiles"
+# Define the repository and version
+REPO_URL="https://github.com/mylinuxforwork/dotfiles.git"
+DEST_DIR="$HOME/Downloads/dotfiles"
+LATEST_VERSION="main"
 
-# Get latest tag from GitHub
-get_latest_release() {
-  curl --silent "https://api.github.com/repos/$repo/releases/latest" | 
-    grep '"tag_name":' | 
-    sed -E 's/.*"([^"]+)".*/\1/'
-}
-
-# Check if package is installed
-_isInstalled() {
-    package="$1"
-    check=$(yum list installed | grep $package)
-    if [ -z "$check" ]; then
-        echo 1
-        return 1  # false
-    else
-        echo 0
-        return 0  # true
-    fi
-}
-
-# Install required packages
-_installPackages() {
-    toInstall=()
-    for pkg; do
-        if [[ $(_isInstalled "${pkg}") == 0 ]]; then
-            echo "${pkg} is already installed."
-            continue
-        fi
-        toInstall+=("${pkg}")
-    done
-    if [[ "${toInstall[@]}" == "" ]]; then
-        return
-    fi
-    printf "Package not installed:\n%s\n" "${toInstall[@]}"
-    sudo dnf install --assumeyes "${toInstall[@]}"
-}
-
-# Function to capture output and extract paths
-capture_paths() {
-    # Create a temporary file to store the installation output
-    temp_output=$(mktemp)
-    
-    # Run the command and capture its output
-    "$@" | tee "$temp_output"
-    
-    # Extract paths that start with "/" from the output
-    grep -o '/[[:alnum:]/_.-]*' "$temp_output" | sort -u > "$HOME/.ml4w_paths"
-    
-    rm "$temp_output"
-}
-
-# Install Gum if not installed
-install_gum() {
-    echo '[charm]
-name=Charm
-baseurl=https://repo.charm.sh/yum/
-enabled=1
-gpgcheck=1
-gpgkey=https://repo.charm.sh/yum/gpg.key' | sudo tee /etc/yum.repos.d/charm.repo
-    capture_paths sudo yum install --assumeyes gum
-}
-
-# Install Expect if not installed
-install_expect() {
-    if ! command -v expect &>/dev/null; then
-        echo ":: Installing expect..."
-        sudo dnf install --assumeyes expect
-    fi
-}
-
-# Required packages for the installer
-packages=(
-    "wget"
-    "unzip"
-    "rsync"
-    "git"
-    "figlet"
-)
-
-latest_version=$(get_latest_release)
-
-# Some colors
-GREEN='\033[0;32m'
-NONE='\033[0m'
-RED='\033[0;31m'
-
-# Header
-echo -e "${GREEN}"
-cat <<"EOF"
-   ____         __       ____       
-  /  _/__  ___ / /____ _/ / /__ ____
- _/ // _ \(_-</ __/ _ `/ / / -_) __/
-/___/_//_/___/\__/\_,_/_/_/\__/_/   
-                                    
-EOF
-echo "ML4W Dotfiles for Hyprland"
-echo -e "${NONE}"
-
-# Install required packages and gum
-echo ":: Checking and installing required packages..."
-_installPackages "${packages[@]}"
-install_gum
-install_expect
-
-# Automatically clone the "main-release" without interaction
-echo ":: Automatically installing Main Release"
-
-# Clone the main release directly without any prompts
-git clone --branch $latest_version --depth 1 https://github.com/mylinuxforwork/dotfiles.git ~/Downloads/dotfiles
-
-echo ":: Download complete."
-echo
-
-# Cd into dotfiles folder
-cd $HOME/Downloads/dotfiles/bin/
-
-# Use 'yes' to automatically answer all "Yes/No" prompts
-echo ":: Automatically answering 'Yes' to all prompts"
-yes | ./ml4w-hyprland-setup -m install
-
-# Start Spinner
-gum spin --spinner dot --title "Starting the setup now..." -- sleep 3
-
-# Handle setup using expect
-echo ":: Starting Fedora setup with automatic responses"
-
-expect <<EOF
-spawn ./ml4w-hyprland-setup -p fedora
-expect {
-    "DO YOU WANT TO START THE UPDATE NOW?" { send "y\r"; exp_continue }
-    "Would you like to reboot now?" { 
-        send "y\r"
-        # Add a small delay before exiting
-        sleep 2
-        exit 0
-    }
-    timeout { send "y\r"; exp_continue }
-}
-expect eof
-EOF
-
-# Add trap to handle the exit
-trap 'echo "Installation complete. System will reboot now."; exit 0' EXIT
-
-# Check if critical files and directories exist after installation
-echo ":: Verifying installation..."
-
-critical_paths=(
-    "$HOME/.config/hypr"
-    "$HOME/.config/waybar"
-    "$HOME/.config/kitty"
-    "$HOME/.config/rofi"
-    "$HOME/.local/share/fonts"
-)
-
-critical_files=(
-    "$HOME/.config/hypr/hyprland.conf"
-    "$HOME/.config/waybar/config"
-    "$HOME/.config/waybar/style.css"
-    "$HOME/.config/kitty/kitty.conf"
-    "$HOME/.config/rofi/config.rasi"
-)
-
-# Check directories
-missing_paths=()
-for path in "${critical_paths[@]}"; do
-    if [ ! -d "$path" ]; then
-        missing_paths+=("$path")
-    fi
-done
-
-# Check files
-missing_files=()
-for file in "${critical_files[@]}"; do
-    if [ ! -f "$file" ]; then
-        missing_files+=("$file")
-    fi
-done
-
-# Display results
-if [ ${#missing_paths[@]} -eq 0 ] && [ ${#missing_files[@]} -eq 0 ]; then
-    echo -e "${GREEN}✓ All required files and directories are in place${NONE}"
-else
-    if [ ${#missing_paths[@]} -gt 0 ]; then
-        echo -e "${RED}Warning: The following directories are missing:${NONE}"
-        printf '%s\n' "${missing_paths[@]}"
-    fi
-    if [ ${#missing_files[@]} -gt 0 ]; then
-        echo -e "${RED}Warning: The following files are missing:${NONE}"
-        printf '%s\n' "${missing_files[@]}"
-    fi
+# Check if running in Bluebuild environment
+if [ ! -f "/usr/bin/rpm-ostree" ]; then
+    echo "This script requires rpm-ostree (Bluebuild/Silverblue environment)"
     exit 1
 fi
 
-# Add this before the verification section
-echo ":: Checking if all files were moved correctly..."
+# Step 1: Install required dependencies via rpm-ostree
+echo "Installing required dependencies..."
+rpm-ostree install --apply-live \
+    expect \
+    git \
+    gum \
+    findutils || {
+    echo "Failed to install dependencies. Exiting."
+    exit 1
+}
 
-# Check if we have a paths file
-if [ -f "$HOME/.ml4w_paths" ]; then
-    missing_moved_files=()
-    while IFS= read -r path; do
-        if [ ! -e "$path" ]; then
-            missing_moved_files+=("$path")
-        fi
-    done < "$HOME/.ml4w_paths"
+# Step 2: Clone the repository
+echo "Cloning the repository..."
+git clone --branch "$LATEST_VERSION" "$REPO_URL" "$DEST_DIR" || {
+    echo "Failed to clone the repository. Exiting."
+    exit 1
+}
 
-    if [ ${#missing_moved_files[@]} -gt 0 ]; then
-        echo -e "${RED}Warning: The following files/directories were not moved correctly:${NONE}"
-        printf '%s\n' "${missing_moved_files[@]}"
-        exit 1
-    else
-        echo -e "${GREEN}✓ All files were moved to their correct locations${NONE}"
-    fi
-    
-    # Clean up paths file
-    rm "$HOME/.ml4w_paths"
-else
-    echo -e "${RED}Warning: Could not verify file movements - no path information available${NONE}"
+# Step 3: Change to the required directory
+BIN_DIR="$DEST_DIR/bin/"
+if [ ! -d "$BIN_DIR" ]; then
+    echo "Directory $BIN_DIR does not exist! Exiting."
+    exit 1
 fi
+cd "$BIN_DIR" || exit 1
+
+# Step 4: Check if the setup script exists and is executable
+if [ ! -f "./ml4w-hyprland-setup" ]; then
+    echo "ml4w-hyprland-setup script is missing! Exiting."
+    exit 1
+fi
+chmod +x ./ml4w-hyprland-setup
+
+# Step 5: Create temporary overlay for installation
+echo "Creating temporary overlay..."
+mkdir -p "$HOME/.local/share/ml4w-overlay"
+export ML4W_OVERLAY_DIR="$HOME/.local/share/ml4w-overlay"
+
+# Step 6: Run the setup script in a non-TTY environment
+if [ -t 1 ]; then
+    gum spin --spinner dot --title "Starting the installation now..." -- sleep 3
+else
+    echo "Starting the installation now..."
+fi
+
+# Step 7: Run the setup script for installation with overlay support
+echo "Running the setup script..."
+expect << EOF
+spawn ./ml4w-hyprland-setup -m install --overlay-dir="$ML4W_OVERLAY_DIR"
+expect {
+    -re "(Do you want to start the update now?|Are you sure you want to continue?|Proceed with the update?|Is this ok?|Continue with the installation?)" {
+        send "y\r"
+        exp_continue
+    }
+    eof
+}
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "Installation failed during setup! Exiting."
+    exit 1
+fi
+
+# Step 8: Run the setup script for Fedora Silverblue/Bluebuild
+echo "Running the setup script for Fedora Silverblue..."
+expect << EOF
+spawn ./ml4w-hyprland-setup -p fedora-silverblue --overlay-dir="$ML4W_OVERLAY_DIR"
+expect {
+    -re "(Do you want to start the update now?|Are you sure you want to continue?|Proceed with the update?|Is this ok?|Continue with the installation?)" {
+        send "y\r"
+        exp_continue
+    }
+    eof
+}
+EOF
+
+if [ $? -ne 0 ]; then
+    echo "Fedora Silverblue setup failed! Exiting."
+    exit 1
+fi
+
+# Step 9: Verify installation files in overlay directory
+echo "Checking for installation files..."
+SEARCH_FILES=("ml4w-hyprland-setup" "dotfiles" "ml4w")
+
+for FILE in "${SEARCH_FILES[@]}"; do
+    FOUND=$(find "$ML4W_OVERLAY_DIR" -type f -name "$FILE" 2>/dev/null)
+    if [ -n "$FOUND" ]; then
+        echo "Found: $FOUND"
+    else
+        echo "Not found: $FILE in overlay directory"
+    fi
+done
+
+# Step 10: Apply overlay changes
+echo "Applying overlay changes..."
+if [ -d "$ML4W_OVERLAY_DIR" ]; then
+    # Copy overlay contents to appropriate locations
+    for dir in "$ML4W_OVERLAY_DIR"/*; do
+        if [ -d "$dir" ]; then
+            base_dir=$(basename "$dir")
+            if [ "$base_dir" = "usr" ]; then
+                sudo cp -r "$dir"/* /usr/
+            else
+                cp -r "$dir"/* "$HOME/.$base_dir"
+            fi
+        fi
+    done
+fi
+
+# Step 11: Cleanup
+echo "Cleaning up..."
+rm -rf "$ML4W_OVERLAY_DIR"
+
+# Step 12: Final confirmation
+echo "Setup completed successfully!"
+echo "Please reboot your system to apply all changes."
